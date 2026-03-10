@@ -14,18 +14,14 @@ if not os.path.exists(UPLOAD_FOLDER):
 def index():
     return render_template("index.html")
 
-@app.route("/style.css")
-def style():
-    return app.send_static_file("style.css")
-
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    tanaman    = request.form.get("tanaman", "")
-    iklim      = request.form.get("iklim", "")
-    suhu       = request.form.get("suhu", "")
+    tanaman   = request.form.get("tanaman", "")
+    iklim     = request.form.get("iklim", "")
+    suhu      = request.form.get("suhu", "")
     kelembaban = request.form.get("kelembaban", "")
-    lokasi     = request.form.get("lokasi", "")
+    lokasi    = request.form.get("lokasi", "")
 
     file = request.files.get("gambar")
     if file and file.filename:
@@ -44,4 +40,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(debug=True)
