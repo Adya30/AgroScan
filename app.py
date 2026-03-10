@@ -12,7 +12,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Simpan API key di environment variable: GEMINI_API_KEY
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCX00bvIMfybkZwrxZjRFA0kHw2ygNFX_U")
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
@@ -35,13 +34,9 @@ def predict():
     if not file or not file.filename:
         return jsonify({"error": "Foto tanaman wajib diupload."}), 400
 
-    # Simpan file
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-    file.save(filepath)
-
-    # Baca gambar dan encode ke base64
-    with open(filepath, "rb") as f:
-        image_data = base64.b64encode(f.read()).decode("utf-8")
+    # Baca gambar langsung dari memory (tidak perlu simpan dulu)
+    image_bytes = file.read()
+    image_data  = base64.b64encode(image_bytes).decode("utf-8")
 
     # Deteksi media type
     ext = file.filename.rsplit(".", 1)[-1].lower()
@@ -54,7 +49,11 @@ def predict():
     }
     media_type = media_type_map.get(ext, "image/jpeg")
 
-    # Prompt ke Gemini
+    # Simpan file juga ke disk
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+    with open(filepath, "wb") as f:
+        f.write(image_bytes)
+
     prompt = f"""Kamu adalah pakar pertanian dan penyakit tanaman.
 Analisis foto tanaman berikut dan berikan diagnosis penyakit secara akurat.
 
@@ -71,7 +70,6 @@ Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan, tanpa mark
   "solusi": "langkah penanganan yang disarankan secara singkat dan jelas"
 }}"""
 
-    # Request ke Gemini API
     payload = {
         "contents": [
             {
@@ -96,13 +94,17 @@ Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan, tanpa mark
 
     try:
         response = requests.post(GEMINI_URL, json=payload, timeout=30)
+
+        # Log status untuk debug
+        print(f"[Gemini] Status: {response.status_code}")
+        print(f"[Gemini] Response: {response.text[:500]}")
+
         response.raise_for_status()
 
-        result    = response.json()
-        raw_text  = result["candidates"][0]["content"]["parts"][0]["text"].strip()
-
-        # Bersihkan jika ada markdown code block
+        result   = response.json()
+        raw_text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
         raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+
         hasil_ai = json.loads(raw_text)
 
         hasil = {
@@ -112,17 +114,21 @@ Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan, tanpa mark
         }
 
     except json.JSONDecodeError:
-        # Jika tidak JSON murni, tampilkan teks langsung
         hasil = {
             "tanaman":  tanaman,
             "penyakit": "Lihat detail",
             "solusi":   raw_text,
         }
+    except requests.exceptions.HTTPError as e:
+        err_body = response.text if response else str(e)
+        print(f"[Gemini] HTTP Error: {err_body}")
+        return jsonify({"error": f"Gemini API error: {err_body}"}), 500
     except Exception as e:
+        print(f"[Error] {str(e)}")
         return jsonify({"error": f"Gagal menganalisis: {str(e)}"}), 500
 
     return jsonify(hasil)
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
