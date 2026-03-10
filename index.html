@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deteksi Penyakit Tanaman</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="container">
+
+        <header class="header">
+            <div class="header-badge">🌿 AgriScan AI</div>
+            <h1 class="title">Deteksi Penyakit<br><span class="title-accent">Tanaman</span></h1>
+            <p class="subtitle">Unggah foto tanaman &amp; masukkan data lingkungan untuk mendapatkan diagnosis akurat berbasis AI.</p>
+        </header>
+
+        <form class="card form" id="analyzeForm" action="/predict" method="post" enctype="multipart/form-data">
+
+            <div class="form-grid">
+
+                <div class="field">
+                    <label class="label" for="tanaman">
+                        <span class="label-icon">🌾</span> Nama Tanaman
+                    </label>
+                    <div class="select-wrap">
+                        <select class="input" name="tanaman" id="tanaman">
+                            <option>Padi</option>
+                            <option>Jagung</option>
+                            <option>Kedelai</option>
+                            <option>Cabai</option>
+                            <option>Tomat</option>
+                        </select>
+                        <span class="select-arrow">↓</span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="iklim">
+                        <span class="label-icon">☁️</span> Iklim
+                    </label>
+                    <div class="select-wrap">
+                        <select class="input" name="iklim" id="iklim">
+                            <option>Tropis</option>
+                            <option>Subtropis</option>
+                            <option>Kering</option>
+                            <option>Lembab</option>
+                        </select>
+                        <span class="select-arrow">↓</span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="label" for="suhu">
+                        <span class="label-icon">🌡️</span> Suhu (°C)
+                    </label>
+                    <input class="input" type="number" name="suhu" id="suhu" placeholder="Contoh: 28">
+                </div>
+
+                <div class="field">
+                    <label class="label" for="kelembaban">
+                        <span class="label-icon">💧</span> Kelembaban (%)
+                    </label>
+                    <input class="input" type="number" name="kelembaban" id="kelembaban" placeholder="Contoh: 75">
+                </div>
+
+                <div class="field field-full">
+                    <label class="label" for="lokasi">
+                        <span class="label-icon">📍</span> Lokasi
+                    </label>
+                    <input class="input" type="text" name="lokasi" id="lokasi" placeholder="Masukkan nama desa/kota/kecamatan...">
+                </div>
+
+            </div>
+
+            <div class="field upload-field">
+                <label class="label">
+                    <span class="label-icon">📷</span> Upload Foto Benih / Tanaman
+                </label>
+                <label class="upload-zone" for="gambar" id="uploadZone">
+                    <div class="upload-icon">⬆</div>
+                    <p class="upload-text">Seret &amp; lepas foto di sini</p>
+                    <p class="upload-hint">atau <span class="upload-link">pilih file</span> dari perangkat Anda</p>
+                    <p class="upload-formats">PNG, JPG, WEBP hingga 10MB</p>
+                    <input type="file" name="gambar" id="gambar" accept="image/*" hidden>
+                </label>
+            </div>
+
+            <button class="btn-submit" type="submit" id="submitBtn">
+                <span class="btn-text">Analisis Sekarang</span>
+                <span class="btn-icon">→</span>
+            </button>
+
+        </form>
+
+        <!-- Hasil Analisis — ditampilkan oleh JavaScript setelah server merespons -->
+        <div class="card result-card" id="resultCard" style="display: none;">
+            <div class="result-header">
+                <span class="result-badge">Hasil Analisis</span>
+                <h2 class="result-title" id="resultTanaman"></h2>
+            </div>
+            <div class="result-grid">
+                <div class="result-item">
+                    <p class="result-label">🦠 Penyakit Terdeteksi</p>
+                    <p class="result-value" id="resultPenyakit"></p>
+                </div>
+                <div class="result-item result-item-solution">
+                    <p class="result-label">💊 Solusi yang Disarankan</p>
+                    <p class="result-value" id="resultSolusi"></p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /* ── Upload zone interactions ── */
+        const zone   = document.getElementById('uploadZone');
+        const input  = document.getElementById('gambar');
+        const hint   = zone.querySelector('.upload-hint');
+
+        input.addEventListener('change', () => {
+            if (input.files.length > 0) {
+                hint.innerHTML = `<span class="upload-link">✓ ${input.files[0].name}</span>`;
+                zone.classList.add('has-file');
+            }
+        });
+
+        zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            input.files = e.dataTransfer.files;
+            input.dispatchEvent(new Event('change'));
+        });
+
+        /* ── Form submit via fetch (AJAX) ── */
+        const form       = document.getElementById('analyzeForm');
+        const submitBtn  = document.getElementById('submitBtn');
+        const resultCard = document.getElementById('resultCard');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Loading state
+            submitBtn.disabled = true;
+            submitBtn.querySelector('.btn-text').textContent = 'Menganalisis…';
+            submitBtn.querySelector('.btn-icon').textContent = '⏳';
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Gagal menghubungi server.');
+
+                const data = await response.json();
+
+                // Tampilkan hasil
+                document.getElementById('resultTanaman').textContent  = data.tanaman  ?? '—';
+                document.getElementById('resultPenyakit').textContent = data.penyakit ?? '—';
+                document.getElementById('resultSolusi').textContent   = data.solusi   ?? '—';
+
+                resultCard.style.display = 'block';
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (err) {
+                alert('Terjadi kesalahan: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.querySelector('.btn-text').textContent = 'Analisis Sekarang';
+                submitBtn.querySelector('.btn-icon').textContent = '→';
+            }
+        });
+    </script>
+
+</body>
+</html>

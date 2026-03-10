@@ -1,0 +1,423 @@
+/* ============================================
+   AgriScan — Plant Disease Detection UI
+   ============================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --green-dark:   #0d3b2a;
+    --green-mid:    #155c3f;
+    --green-bright: #25a265;
+    --green-light:  #4fd99a;
+    --green-glow:   #a8ffd4;
+    --cream:        #f5f0e8;
+    --cream-dark:   #e8e0d0;
+    --text-main:    #1a2e23;
+    --text-muted:   #5a7a66;
+    --border:       rgba(37, 162, 101, 0.18);
+    --shadow-card:  0 8px 40px rgba(13, 59, 42, 0.12);
+    --radius-card:  20px;
+    --radius-input: 12px;
+    --transition:   0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--cream);
+    color: var(--text-main);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ── Background blobs ── */
+.bg-blobs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.35;
+    animation: float 12s ease-in-out infinite alternate;
+}
+
+.blob-1 {
+    width: 520px; height: 520px;
+    background: radial-gradient(circle, #25a265 0%, transparent 70%);
+    top: -140px; left: -160px;
+    animation-delay: 0s;
+}
+
+.blob-2 {
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, #4fd99a 0%, transparent 70%);
+    top: 40%; right: -100px;
+    animation-delay: -4s;
+}
+
+.blob-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, #0d3b2a 0%, transparent 70%);
+    bottom: -80px; left: 30%;
+    animation-delay: -8s;
+    opacity: 0.18;
+}
+
+@keyframes float {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.06); }
+}
+
+/* ── Container ── */
+.container {
+    position: relative;
+    z-index: 1;
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+}
+
+/* ── Header ── */
+.header {
+    text-align: center;
+    margin-bottom: 44px;
+    animation: fadeUp 0.6s ease both;
+}
+
+.header-badge {
+    display: inline-block;
+    background: var(--green-mid);
+    color: var(--green-glow);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(79, 217, 154, 0.3);
+}
+
+.title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 6vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.08;
+    color: var(--green-dark);
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+}
+
+.title-accent {
+    color: var(--green-bright);
+    position: relative;
+    display: inline-block;
+}
+
+.title-accent::after {
+    content: '';
+    position: absolute;
+    bottom: 4px; left: 0; right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--green-light), transparent);
+    border-radius: 99px;
+    opacity: 0.45;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: 1.65;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* ── Card ── */
+.card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 36px 36px 40px;
+    box-shadow: var(--shadow-card);
+    animation: fadeUp 0.6s ease 0.15s both;
+}
+
+/* ── Form grid ── */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 24px;
+    margin-bottom: 20px;
+}
+
+.field-full {
+    grid-column: 1 / -1;
+}
+
+/* ── Field ── */
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--green-mid);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.label-icon { font-size: 1rem; }
+
+/* ── Inputs & selects ── */
+.input {
+    width: 100%;
+    padding: 13px 16px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-input);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.97rem;
+    color: var(--text-main);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.input::placeholder { color: #a0b5aa; }
+
+.input:focus {
+    border-color: var(--green-bright);
+    box-shadow: 0 0 0 4px rgba(37, 162, 101, 0.12);
+    background: #fff;
+}
+
+.select-wrap {
+    position: relative;
+}
+
+.select-wrap .input {
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    color: var(--green-bright);
+    pointer-events: none;
+    font-weight: 700;
+}
+
+/* ── Upload zone ── */
+.upload-field { margin-bottom: 28px; }
+
+.upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 36px 24px;
+    border: 2px dashed rgba(37, 162, 101, 0.35);
+    border-radius: var(--radius-input);
+    background: rgba(168, 255, 212, 0.06);
+    cursor: pointer;
+    transition: border-color var(--transition), background var(--transition);
+    text-align: center;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: var(--green-bright);
+    background: rgba(37, 162, 101, 0.07);
+}
+
+.upload-zone.has-file {
+    border-style: solid;
+    border-color: var(--green-bright);
+    background: rgba(37, 162, 101, 0.05);
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: var(--green-bright);
+    line-height: 1;
+    transition: transform var(--transition);
+}
+
+.upload-zone:hover .upload-icon { transform: translateY(-3px); }
+
+.upload-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.upload-link {
+    color: var(--green-bright);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.upload-formats {
+    font-size: 0.78rem;
+    color: #aac4b5;
+    margin-top: 4px;
+}
+
+/* ── Submit button ── */
+.btn-submit {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, var(--green-mid) 0%, var(--green-bright) 100%);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border: none;
+    border-radius: var(--radius-input);
+    cursor: pointer;
+    transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+    box-shadow: 0 6px 24px rgba(21, 92, 63, 0.35);
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(21, 92, 63, 0.42);
+    filter: brightness(1.08);
+}
+
+.btn-submit:active { transform: translateY(0); }
+
+.btn-icon {
+    font-size: 1.1rem;
+    transition: transform var(--transition);
+}
+
+.btn-submit:hover .btn-icon { transform: translateX(4px); }
+
+/* ── Result card ── */
+.result-card {
+    margin-top: 28px;
+    animation: fadeUp 0.5s ease both;
+}
+
+.result-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.result-badge {
+    display: inline-block;
+    background: rgba(37, 162, 101, 0.12);
+    color: var(--green-bright);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    width: fit-content;
+}
+
+.result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--green-dark);
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.result-item {
+    background: rgba(13, 59, 42, 0.04);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-input);
+    padding: 18px 20px;
+}
+
+.result-item-solution {
+    border-color: rgba(37, 162, 101, 0.3);
+    background: rgba(37, 162, 101, 0.06);
+}
+
+.result-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.result-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    .card { padding: 24px 20px 28px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .field-full { grid-column: unset; }
+    .result-grid { grid-template-columns: 1fr; }
+    .title { font-size: 2.1rem; }
+}
