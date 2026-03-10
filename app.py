@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import os
 import base64
-import anthropic
+import json
+import requests
 
 app = Flask(__name__, template_folder='.', static_folder='static')
 
@@ -11,9 +12,9 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Inisialisasi Anthropic client
-# Simpan API key di environment variable: ANTHROPIC_API_KEY
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+# Simpan API key di environment variable: GEMINI_API_KEY
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCX00bvIMfybkZwrxZjRFA0kHw2ygNFX_U")
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
 
 @app.route("/")
@@ -40,7 +41,7 @@ def predict():
 
     # Baca gambar dan encode ke base64
     with open(filepath, "rb") as f:
-        image_data = base64.standard_b64encode(f.read()).decode("utf-8")
+        image_data = base64.b64encode(f.read()).decode("utf-8")
 
     # Deteksi media type
     ext = file.filename.rsplit(".", 1)[-1].lower()
@@ -53,7 +54,7 @@ def predict():
     }
     media_type = media_type_map.get(ext, "image/jpeg")
 
-    # Prompt ke Claude
+    # Prompt ke Gemini
     prompt = f"""Kamu adalah pakar pertanian dan penyakit tanaman.
 Analisis foto tanaman berikut dan berikan diagnosis penyakit secara akurat.
 
@@ -64,43 +65,45 @@ Data lingkungan:
 - Kelembaban    : {kelembaban}%
 - Lokasi        : {lokasi}
 
-Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan apapun:
+Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan, tanpa markdown:
 {{
   "penyakit": "nama penyakit yang terdeteksi (atau 'Sehat' jika tidak ada penyakit)",
   "solusi": "langkah penanganan yang disarankan secara singkat dan jelas"
 }}"""
 
-    try:
-        message = client.messages.create(
-            model="claude-opus-4-6",
-            max_tokens=512,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": media_type,
-                                "data": image_data,
-                            },
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
+    # Request ke Gemini API
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "inline_data": {
+                            "mime_type": media_type,
+                            "data": image_data
                         }
-                    ],
-                }
-            ],
-        )
+                    },
+                    {
+                        "text": prompt
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "maxOutputTokens": 512
+        }
+    }
 
-        # Parse JSON dari respons Claude
-        import json
-        raw = message.content[0].text.strip()
+    try:
+        response = requests.post(GEMINI_URL, json=payload, timeout=30)
+        response.raise_for_status()
+
+        result    = response.json()
+        raw_text  = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
         # Bersihkan jika ada markdown code block
-        raw = raw.replace("```json", "").replace("```", "").strip()
-        hasil_ai = json.loads(raw)
+        raw_text = raw_text.replace("```json", "").replace("```", "").strip()
+        hasil_ai = json.loads(raw_text)
 
         hasil = {
             "tanaman":  tanaman,
@@ -109,11 +112,11 @@ Berikan respons HANYA dalam format JSON berikut, tanpa teks tambahan apapun:
         }
 
     except json.JSONDecodeError:
-        # Jika Claude tidak mengembalikan JSON murni, tampilkan teks biasa
+        # Jika tidak JSON murni, tampilkan teks langsung
         hasil = {
             "tanaman":  tanaman,
-            "penyakit": "Lihat detail di bawah",
-            "solusi":   message.content[0].text.strip(),
+            "penyakit": "Lihat detail",
+            "solusi":   raw_text,
         }
     except Exception as e:
         return jsonify({"error": f"Gagal menganalisis: {str(e)}"}), 500
