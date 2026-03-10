@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import os
 
-app = Flask(__name__, template_folder='.', static_folder='.')
+app = Flask(__name__, template_folder='.', static_folder='static')
 
 UPLOAD_FOLDER = "uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -17,11 +17,11 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    tanaman   = request.form.get("tanaman", "")
-    iklim     = request.form.get("iklim", "")
-    suhu      = request.form.get("suhu", "")
+    tanaman    = request.form.get("tanaman", "")
+    iklim      = request.form.get("iklim", "")
+    suhu       = request.form.get("suhu", "")
     kelembaban = request.form.get("kelembaban", "")
-    lokasi    = request.form.get("lokasi", "")
+    lokasi     = request.form.get("lokasi", "")
 
     file = request.files.get("gambar")
     if file and file.filename:
@@ -40,4 +40,4 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
